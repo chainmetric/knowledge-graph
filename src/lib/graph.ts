@@ -1,7 +1,31 @@
-import Graph from 'graphology';
-import louvain from 'graphology-communities-louvain';
-import betweennessCentrality from 'graphology-metrics/centrality/betweenness.js';
-import pagerank from 'graphology-metrics/centrality/pagerank.js';
+// graphology and its metric subpackages are CJS that declare `export default`
+// in their typings but, under NodeNext + esModuleInterop, resolve to the module
+// namespace rather than the default binding — so the class reads as
+// non-constructable and pagerank/louvain/betweenness as non-callable, though
+// every one of them works at runtime (the suite exercises them). Bind each
+// through its real runtime shape, and take the graph instance type from
+// graphology-types, whose `AbstractGraph` is a normal named export that does
+// resolve. `Graph` then serves as both value (the class) and type (the
+// instance) via declaration merging, so no call site below has to change.
+import * as GraphModule from 'graphology';
+import * as louvainModule from 'graphology-communities-louvain';
+import * as betweennessModule from 'graphology-metrics/centrality/betweenness.js';
+import * as pagerankModule from 'graphology-metrics/centrality/pagerank.js';
+import type { AbstractGraph } from 'graphology-types';
+
+type GraphOptions = { multi?: boolean; type?: 'directed' | 'undirected' | 'mixed' };
+
+type Graph = AbstractGraph;
+const Graph = GraphModule.default as unknown as new (options?: GraphOptions) => AbstractGraph;
+const louvain = louvainModule.default as unknown as (
+  graph: AbstractGraph, options?: { resolution?: number },
+) => Record<string, number>;
+const betweennessCentrality = betweennessModule.default as unknown as (
+  graph: AbstractGraph,
+) => Record<string, number>;
+const pagerank = pagerankModule.default as unknown as (
+  graph: AbstractGraph, options?: { maxIterations?: number; tolerance?: number },
+) => Record<string, number>;
 import type { Store } from './store.js';
 import type { PathResult, SubgraphResult, Community } from './types.js';
 
